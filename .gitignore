@@ -1,0 +1,19 @@
+# Data
+data/raw/
+data/processed/
+
+# Databases
+*.db
+*.sqlite
+*.sqlite3
+
+# Python
+__pycache__/
+*.pyc
+.ipynb_checkpoints/
+
+# OS
+.DS_Store
+
+# Temporary files
+*.zip

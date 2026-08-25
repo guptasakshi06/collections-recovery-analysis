@@ -1,0 +1,654 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Collections Recovery — Executive Audit Dashboard</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Newsreader:ital,opsz,wght@0,6..72,400;0,6..72,500;0,6..72,600;0,6..72,700;1,6..72,500&family=IBM+Plex+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<style>
+:root{
+  --paper:#F2F1EC;
+  --paper-raised:#FBFAF7;
+  --ink:#1C2126;
+  --ink-soft:#5B6470;
+  --line:#D9D6CC;
+  --teal:#0E6E63;
+  --teal-soft:#DCEAE7;
+  --amber:#B9812E;
+  --amber-soft:#F3E6CC;
+  --red:#A8402F;
+  --red-soft:#F3DED8;
+  --green:#3C7A54;
+  --green-soft:#DEEBE1;
+  --navy:#1E2A3A;
+}
+*{box-sizing:border-box;}
+html,body{margin:0;padding:0;}
+body{
+  background:var(--paper);
+  color:var(--ink);
+  font-family:'IBM Plex Sans',sans-serif;
+  font-size:14px;
+  line-height:1.5;
+}
+.mono{font-family:'IBM Plex Mono',monospace;}
+h1,h2,h3,h4{font-family:'Newsreader',serif; font-weight:600; margin:0;}
+::selection{background:var(--teal-soft);}
+
+/* ---------- Top bar ---------- */
+.topbar{
+  background:var(--navy);
+  color:#EDEAE0;
+  padding:22px 32px 18px;
+  border-bottom:3px solid var(--teal);
+}
+.topbar-inner{max-width:1320px;margin:0 auto;display:flex;justify-content:space-between;align-items:flex-end;gap:24px;flex-wrap:wrap;}
+.topbar .eyebrow{
+  font-family:'IBM Plex Mono',monospace;
+  font-size:11px; letter-spacing:.14em; text-transform:uppercase;
+  color:#9FB3AE; margin-bottom:6px;
+}
+.topbar h1{font-size:26px; color:#FBFAF7; font-weight:600;}
+.topbar .sub{color:#B7BEC9; font-size:13px; margin-top:4px;}
+.verdict-chip{
+  font-family:'IBM Plex Mono',monospace;
+  font-size:12px; letter-spacing:.04em;
+  padding:10px 16px;
+  border-radius:3px;
+  display:flex; flex-direction:column; gap:2px;
+  min-width:230px;
+  border:1px solid rgba(255,255,255,.14);
+}
+.verdict-chip .vlabel{color:#9FB3AE; font-size:10px; text-transform:uppercase; letter-spacing:.12em;}
+.verdict-chip .vvalue{font-size:15px; font-weight:600;}
+.verdict-not-supported{background:rgba(168,64,47,.22); border-color:rgba(168,64,47,.5);}
+.verdict-not-supported .vvalue{color:#E8B4A7;}
+
+/* ---------- Tabs ---------- */
+.tabbar{
+  background:var(--paper-raised);
+  border-bottom:1px solid var(--line);
+  position:sticky; top:0; z-index:50;
+}
+.tabbar-inner{max-width:1320px;margin:0 auto;display:flex;overflow-x:auto;}
+.tab-btn{
+  font-family:'IBM Plex Mono',monospace;
+  font-size:12px; letter-spacing:.03em;
+  background:none;border:none;
+  padding:14px 18px 12px;
+  color:var(--ink-soft);
+  cursor:pointer;
+  border-bottom:3px solid transparent;
+  white-space:nowrap;
+}
+.tab-btn .n{opacity:.55;margin-right:6px;}
+.tab-btn:hover{color:var(--ink);}
+.tab-btn.active{color:var(--teal); border-bottom-color:var(--teal); font-weight:600;}
+
+/* ---------- Layout ---------- */
+.wrap{max-width:1320px;margin:0 auto;padding:28px 32px 80px;}
+.panel{display:none;}
+.panel.active{display:block; animation:fadein .25s ease;}
+@keyframes fadein{from{opacity:0;transform:translateY(4px);}to{opacity:1;transform:none;}}
+
+.section-title{
+  display:flex; align-items:baseline; gap:10px; margin:36px 0 14px;
+}
+.section-title h2{font-size:19px;}
+.section-title .idx{font-family:'IBM Plex Mono',monospace;color:var(--teal);font-size:13px;}
+.section-note{color:var(--ink-soft); font-size:12.5px; max-width:820px; margin-bottom:16px;}
+
+/* ---------- Cards / grid ---------- */
+.grid{display:grid; gap:14px;}
+.grid-4{grid-template-columns:repeat(4,1fr);}
+.grid-3{grid-template-columns:repeat(3,1fr);}
+.grid-2{grid-template-columns:repeat(2,1fr);}
+@media(max-width:1000px){.grid-4{grid-template-columns:repeat(2,1fr);} .grid-3{grid-template-columns:repeat(2,1fr);}}
+
+.card{
+  background:var(--paper-raised);
+  border:1px solid var(--line);
+  border-radius:4px;
+  padding:16px 18px;
+}
+.kpi .label{font-size:11px; text-transform:uppercase; letter-spacing:.08em; color:var(--ink-soft); font-family:'IBM Plex Mono',monospace;}
+.kpi .value{font-family:'IBM Plex Mono',monospace; font-size:24px; font-weight:600; margin-top:6px; color:var(--navy);}
+.kpi .delta{font-size:11.5px; margin-top:4px; font-family:'IBM Plex Mono',monospace;}
+.delta.up{color:var(--green);}
+.delta.down{color:var(--red);}
+.delta.flat{color:var(--ink-soft);}
+
+.tag{
+  display:inline-block; font-family:'IBM Plex Mono',monospace; font-size:10.5px;
+  letter-spacing:.06em; text-transform:uppercase; padding:2px 8px; border-radius:20px;
+  border:1px solid currentColor;
+}
+.tag-fact{color:var(--teal); background:var(--teal-soft);}
+.tag-evidence{color:#2B5F94; background:#DDE7F2;}
+.tag-correlation{color:var(--amber); background:var(--amber-soft);}
+.tag-hypothesis{color:var(--ink-soft); background:#E7E5DD;}
+
+table{width:100%; border-collapse:collapse; font-size:13px;}
+th{
+  text-align:left; font-family:'IBM Plex Mono',monospace; font-size:10.5px; letter-spacing:.05em;
+  text-transform:uppercase; color:var(--ink-soft); border-bottom:1px solid var(--line); padding:8px 10px;
+}
+td{padding:8px 10px; border-bottom:1px solid #EAE8E0;}
+tr:last-child td{border-bottom:none;}
+td.num, th.num{text-align:right; font-family:'IBM Plex Mono',monospace;}
+
+.chart-box{background:var(--paper-raised); border:1px solid var(--line); border-radius:4px; padding:18px;}
+.chart-head{display:flex; justify-content:space-between; align-items:center; margin-bottom:12px; flex-wrap:wrap; gap:10px;}
+.chart-head h3{font-size:15px;}
+select, .btnrow button{
+  font-family:'IBM Plex Mono',monospace; font-size:11.5px; background:var(--paper);
+  border:1px solid var(--line); border-radius:3px; padding:6px 10px; color:var(--ink); cursor:pointer;
+}
+.btnrow{display:flex; gap:6px; flex-wrap:wrap;}
+.btnrow button.active{background:var(--teal); color:#fff; border-color:var(--teal);}
+
+.callout{border-left:4px solid var(--teal); background:var(--teal-soft); padding:14px 16px; border-radius:0 4px 4px 0; font-size:13px;}
+.callout.warn{border-color:var(--red); background:var(--red-soft);}
+.callout.amber{border-color:var(--amber); background:var(--amber-soft);}
+.callout h4{font-size:13px; margin-bottom:6px; font-family:'IBM Plex Sans',sans-serif; font-weight:600;}
+
+.finding{display:flex; gap:12px; padding:12px 0; border-bottom:1px solid #EAE8E0;}
+.finding:last-child{border-bottom:none;}
+.finding .ftag{flex-shrink:0; padding-top:2px;}
+.finding .ftext{font-size:13px;}
+.finding .ftext b{color:var(--navy);}
+
+.claim-compare{display:grid; grid-template-columns:repeat(3,1fr); gap:0; border:1px solid var(--line); border-radius:4px; overflow:hidden;}
+.claim-cell{padding:22px 20px; background:var(--paper-raised); border-right:1px solid var(--line);}
+.claim-cell:last-child{border-right:none;}
+.claim-cell .clabel{font-family:'IBM Plex Mono',monospace; font-size:10.5px; text-transform:uppercase; letter-spacing:.08em; color:var(--ink-soft);}
+.claim-cell .cval{font-family:'IBM Plex Mono',monospace; font-size:34px; font-weight:600; margin-top:8px;}
+.claim-cell .cdesc{font-size:12px; color:var(--ink-soft); margin-top:6px;}
+.claim-cell.reported .cval{color:var(--amber);}
+.claim-cell.actual .cval{color:var(--red);}
+.claim-cell.verdict{background:var(--navy); color:#EDEAE0;}
+.claim-cell.verdict .clabel{color:#9FB3AE;}
+.claim-cell.verdict .cval{color:#E8B4A7; font-size:22px;}
+.claim-cell.verdict .cdesc{color:#B7BEC9;}
+
+.footer-note{margin-top:60px; padding-top:16px; border-top:1px solid var(--line); font-size:11.5px; color:var(--ink-soft); font-family:'IBM Plex Mono',monospace;}
+a{color:var(--teal);}
+.small{font-size:11.5px; color:var(--ink-soft);}
+ul.plain{margin:6px 0 0 18px; padding:0;}
+ul.plain li{margin-bottom:4px; font-size:13px;}
+</style>
+</head>
+<body>
+
+<div class="topbar">
+  <div class="topbar-inner">
+    <div>
+      <div class="eyebrow">Collections Analytics · Jan–Aug 2026 · Golden Dataset v1</div>
+      <h1>Did recovery actually improve by 11%?</h1>
+      <div class="sub">Independent audit of the reported month-on-month recovery claim, its drivers, data quality, and the ₹10&nbsp;Cr allocation decision.</div>
+    </div>
+    <div class="verdict-chip verdict-not-supported">
+      <span class="vlabel">Verdict on the 11% claim</span>
+      <span class="vvalue">NOT SUPPORTED — cherry-picked month</span>
+      <span class="small" style="color:#B7BEC9;">7-month trend is flat (+0.01%), R²=0.004</span>
+    </div>
+  </div>
+</div>
+
+<div class="tabbar">
+  <div class="tabbar-inner">
+    <button class="tab-btn active" data-tab="exec"><span class="n">01</span>Executive View</button>
+    <button class="tab-btn" data-tab="claim"><span class="n">02</span>The 11% Claim</button>
+    <button class="tab-btn" data-tab="perf"><span class="n">03</span>Recovery Performance</button>
+    <button class="tab-btn" data-tab="drivers"><span class="n">04</span>Driver Analysis</button>
+    <button class="tab-btn" data-tab="dq"><span class="n">05</span>Data Quality / Forensics</button>
+    <button class="tab-btn" data-tab="invest"><span class="n">06</span>₹10&nbsp;Cr Investment</button>
+  </div>
+</div>
+
+<div class="wrap">
+
+<!-- ============ PANEL 1: EXECUTIVE ============ -->
+<div class="panel active" id="panel-exec">
+
+  <div class="section-title"><span class="idx">A</span><h2>What happened — portfolio snapshot</h2></div>
+  <div class="grid grid-4" id="exec-kpis"></div>
+
+  <div class="section-title"><span class="idx">B</span><h2>Did recovery actually improve?</h2></div>
+  <div class="section-note">Three ways of answering the same question. The reported figure is a single month-pair comparison; the independent and adjusted figures use the full 7-month observation window (Jan–Jul; Aug is a partial month and excluded from trend statistics).</div>
+  <div class="claim-compare">
+    <div class="claim-cell reported">
+      <div class="clabel">Reported by business</div>
+      <div class="cval">+11.0%</div>
+      <div class="cdesc">"Recovery improved 11% month-on-month" — no month specified in the original claim.</div>
+    </div>
+    <div class="claim-cell actual">
+      <div class="clabel">Independently recalculated</div>
+      <div class="cval">+0.3%</div>
+      <div class="cdesc">Average MoM change across all 6 month-pairs, Jan→Jul. Median +0.24%. Std. dev. ±8.4 pts — the series is noisy, not trending.</div>
+    </div>
+    <div class="claim-cell verdict">
+      <div class="clabel">Conclusion</div>
+      <div class="cval">NOT SUPPORTED</div>
+      <div class="cdesc">Jan (₹18.72&nbsp;Cr) and Jul (₹18.72&nbsp;Cr) recovery are effectively identical. The 11.0% figure matches the Feb→Mar jump almost exactly and does not represent a sustained trend.</div>
+    </div>
+  </div>
+
+  <div class="section-title"><span class="idx">C</span><h2>When did performance change?</h2></div>
+  <div class="chart-box">
+    <div class="chart-head">
+      <h3>Monthly successful recovery (₹)</h3>
+      <div class="btnrow" id="exec-metric-toggle">
+        <button data-m="successful_recovery" class="active">Recovery ₹</button>
+        <button data-m="recovery_rate_pct">Recovery Rate %</button>
+        <button data-m="contact_rate_pct">Contact Rate %</button>
+        <button data-m="ptp_kept_rate_pct">PTP Kept %</button>
+      </div>
+    </div>
+    <canvas id="chart-exec-trend" height="90"></canvas>
+    <div class="small" style="margin-top:8px;">August is shown hatched — only 8 days of data, excluded from all trend/verdict statistics.</div>
+  </div>
+
+  <div class="section-title"><span class="idx">D</span><h2>Why did performance move? — driver summary</h2></div>
+  <div class="section-note">Every candidate driver below was tested against the data. None shows a statistically meaningful effect on recovery — the differences across segments are within one standard error of each other. This itself is a finding: the Feb→Mar spike behaves like statistical noise around a flat baseline, not a response to any identifiable lever.</div>
+  <table>
+    <thead><tr><th>Driver</th><th class="num">Range observed</th><th>Impact</th><th>Confidence</th></tr></thead>
+    <tbody>
+      <tr><td>Risk-segment mix of paying accounts</td><td class="num">24.0% – 26.9% share, month to month</td><td>No shift — mix is stable</td><td><span class="tag tag-fact">Fact</span></td></tr>
+      <tr><td>DPD bucket</td><td class="num">12.30% – 13.20% recovery rate</td><td>Negligible (~1pt spread)</td><td><span class="tag tag-evidence">Strong evidence</span></td></tr>
+      <tr><td>Channel (targeting-linked recovery)</td><td class="num">₹73.9k – ₹76.2k per contacted target</td><td>Differences smaller than standard error</td><td><span class="tag tag-evidence">Strong evidence</span></td></tr>
+      <tr><td>Agent tenure</td><td class="num">19.7% – 20.2% contact rate</td><td>Negligible</td><td><span class="tag tag-evidence">Strong evidence</span></td></tr>
+      <tr><td>Campaign attribution window</td><td class="num">1,338 – 9,505 payments matched (7–90 day window)</td><td>Reported campaign performance is highly sensitive to window choice</td><td><span class="tag tag-fact">Fact</span></td></tr>
+      <tr><td>Targeting strategy change (mid-year)</td><td class="num">No break-point detected in volume, priority or channel mix</td><td>Not observed in this dataset</td><td><span class="tag tag-hypothesis">Hypothesis — unconfirmed</span></td></tr>
+    </tbody>
+  </table>
+
+  <div class="section-title"><span class="idx">E</span><h2>Where should ₹10 Cr go?</h2></div>
+  <div class="callout amber">
+    <h4>Insufficient evidence for a confident single-option allocation</h4>
+    No cost, unit-economics, or vendor-pricing data exists anywhere in the provided tables (no salary, campaign spend, telephony cost, or per-channel cost fields) — so ROI, break-even, and cost-per-₹-recovered cannot be calculated for any of the six options. No driver tested in this dataset shows a statistically meaningful performance edge either. See Tab 06 for the full reasoning, a directional lean, and the specific data/experiments needed to de-risk a ₹10&nbsp;Cr commitment.
+  </div>
+
+</div>
+
+<!-- ============ PANEL 2: 11% CLAIM ============ -->
+<div class="panel" id="panel-claim">
+
+  <div class="section-title"><span class="idx">A</span><h2>Auditing "recovery improved by 11% month-on-month"</h2></div>
+  <div class="section-note">Golden dataset: <span class="mono">payments</span> table deduplicated on <span class="mono">payment_id</span> (25,500 → 25,000 rows), <span class="mono">payment_status = SUCCESS</span> treated as realized recovery. Denominator for recovery rate is total portfolio outstanding (₹1,048.9&nbsp;Cr), held constant across months so the ratio isolates changes in recovery, not portfolio size.</div>
+
+  <div class="chart-box">
+    <div class="chart-head"><h3>Month-on-month % change in successful recovery</h3></div>
+    <canvas id="chart-mom" height="80"></canvas>
+  </div>
+
+  <div class="grid grid-4" style="margin-top:18px;">
+    <div class="card kpi"><div class="label">Reported claim</div><div class="value" style="color:var(--amber);">+11.0%</div><div class="delta flat">Single month-pair, unspecified</div></div>
+    <div class="card kpi"><div class="label">Closest real match</div><div class="value">+11.03%</div><div class="delta flat">Feb → Mar only</div></div>
+    <div class="card kpi"><div class="label">Avg. MoM change (Jan–Jul)</div><div class="value">+0.29%</div><div class="delta flat">Median +0.24% · σ=8.4pts</div></div>
+    <div class="card kpi"><div class="label">Jan vs Jul, net change</div><div class="value">+0.01%</div><div class="delta flat">₹18.72 Cr → ₹18.72 Cr</div></div>
+  </div>
+
+  <div class="section-title"><span class="idx">B</span><h2>Decomposition — why the claim doesn't hold up</h2></div>
+  <div class="grid grid-2">
+    <div class="card">
+      <h4 style="font-family:'IBM Plex Sans';font-size:14px;margin-bottom:10px;">1. It is a single-month comparison, not a trend</h4>
+      <p style="font-size:13px;">Of the six available month-pairs (Feb–Jul), MoM change was <b>+11.0% only once</b> (Feb→Mar). The other five pairs were −9.1%, −7.3%, +5.2%, −4.7%, +6.7%. Presenting the one positive outlier as "the" trend is a cherry-picked reference period, not a representative summary.</p>
+      <span class="tag tag-fact">Fact</span>
+    </div>
+    <div class="card">
+      <h4 style="font-family:'IBM Plex Sans';font-size:14px;margin-bottom:10px;">2. There is no statistically detectable trend</h4>
+      <p style="font-size:13px;">Regressing monthly recovery against month index gives <b>R² = 0.004</b> — month explains essentially none of the variance. A flat line (no growth, no decline) fits the data about as well as any trend line would.</p>
+      <span class="tag tag-fact">Fact</span>
+    </div>
+    <div class="card">
+      <h4 style="font-family:'IBM Plex Sans';font-size:14px;margin-bottom:10px;">3. First-half vs second-half is flat</h4>
+      <p style="font-size:13px;">Jan–Mar average monthly recovery: ₹18.21&nbsp;Cr. May–Jul average: ₹18.24&nbsp;Cr. Change: <b>+0.14%</b> — not 11%, and not distinguishable from noise given the ±8.4-point month-to-month volatility.</p>
+      <span class="tag tag-fact">Fact</span>
+    </div>
+    <div class="card">
+      <h4 style="font-family:'IBM Plex Sans';font-size:14px;margin-bottom:10px;">4. Mix-adjustment doesn't change the picture</h4>
+      <p style="font-size:13px;">Risk-segment share of recovered value is stable within a 24.0–26.9% band every month (see Driver tab) — there is no meaningful portfolio-mix shift to control for. The "adjusted" and "independent" figures are therefore the same: <b>+0.3%</b>, not +11%.</p>
+      <span class="tag tag-evidence">Strong evidence</span>
+    </div>
+  </div>
+
+  <div class="section-title"><span class="idx">C</span><h2>Reported vs. independent vs. adjusted</h2></div>
+  <table>
+    <thead><tr><th>Basis</th><th class="num">MoM improvement</th><th>Method</th></tr></thead>
+    <tbody>
+      <tr><td>Reported by business</td><td class="num mono" style="color:var(--amber);">+11.0%</td><td>Undisclosed method; matches Feb→Mar only</td></tr>
+      <tr><td>Independently calculated (avg. of all pairs)</td><td class="num mono">+0.29%</td><td>Mean MoM %, successful payment amount, Jan–Jul</td></tr>
+      <tr><td>Adjusted / mix-controlled</td><td class="num mono">+0.14%</td><td>H1 (Jan–Mar) vs H2 (May–Jul) average; risk-segment mix confirmed stable, no adjustment needed</td></tr>
+      <tr><td><b>Difference vs. reported</b></td><td class="num mono" style="color:var(--red);"><b>−10.7 to −10.9 pts</b></td><td>—</td></tr>
+    </tbody>
+  </table>
+
+  <div class="callout warn" style="margin-top:20px;">
+    <h4>If the claim is being repeated to leadership</h4>
+    Recommend it be retracted or rescoped as "recovery was flat over 7 months, with month-to-month swings of roughly ±8 percentage points and no identified structural driver of improvement." Continuing to cite +11% risks a ₹10 Cr allocation decision built on a statistical artifact rather than a real operational gain.
+  </div>
+</div>
+
+<!-- ============ PANEL 3: RECOVERY PERFORMANCE ============ -->
+<div class="panel" id="panel-perf">
+
+  <div class="section-title"><span class="idx">A</span><h2>Core recovery KPIs (7-month average, Jan–Jul)</h2></div>
+  <div class="grid grid-4" id="perf-kpis"></div>
+
+  <div class="section-title"><span class="idx">B</span><h2>Monthly trend — all core metrics</h2></div>
+  <div class="grid grid-2">
+    <div class="chart-box"><div class="chart-head"><h3>Recovery amount (₹)</h3></div><canvas id="c-rec-amt" height="110"></canvas></div>
+    <div class="chart-box"><div class="chart-head"><h3>Recovery rate (%)</h3></div><canvas id="c-rec-rate" height="110"></canvas></div>
+    <div class="chart-box"><div class="chart-head"><h3>Recovery / account (₹)</h3></div><canvas id="c-rec-acct" height="110"></canvas></div>
+    <div class="chart-box"><div class="chart-head"><h3>Recovery / agent-hour (₹)</h3></div><canvas id="c-rec-hr" height="110"></canvas></div>
+  </div>
+
+  <div class="section-title"><span class="idx">C</span><h2>Contact → RPC → PTP → Payment funnel</h2></div>
+  <div class="section-note">RPC (right-party contact) is approximated as dispositions excluding NO_CONTACT and WRONG_NUMBER, since the raw data has no explicit right-party flag — documented as a modeling assumption in the metric dictionary.</div>
+  <div class="chart-box"><canvas id="c-funnel" height="70"></canvas></div>
+
+  <div class="section-title"><span class="idx">D</span><h2>Recovery by DPD bucket</h2></div>
+  <table>
+    <thead><tr><th>DPD bucket</th><th class="num">Outstanding (₹)</th><th class="num">Recovered, 7mo (₹)</th><th class="num">Recovery rate</th></tr></thead>
+    <tbody id="dpd-table"></tbody>
+  </table>
+  <div class="small" style="margin-top:8px;">Recovery rate is essentially flat across DPD buckets (12.3%–13.2%) — early- and late-stage delinquency recover at nearly the same rate in this portfolio, which is unusual and worth separately validating against the source system.</div>
+
+</div>
+
+<!-- ============ PANEL 4: DRIVER ANALYSIS ============ -->
+<div class="panel" id="panel-drivers">
+
+  <div class="section-title"><span class="idx">A</span><h2>Filter by dimension</h2></div>
+  <div class="btnrow" id="driver-filter">
+    <button data-d="channel" class="active">Channel</button>
+    <button data-d="dpd">DPD bucket</button>
+    <button data-d="tenure">Agent tenure</button>
+  </div>
+
+  <div class="section-title"><span class="idx">B</span><h2>Recovery per targeted account, by recommended channel</h2></div>
+  <div class="section-note">Payments matched to the most recent targeting event within a 30-day attribution window, per account. Error bars show ±1 standard error.</div>
+  <div class="chart-box"><canvas id="c-channel" height="90"></canvas></div>
+  <table style="margin-top:12px;">
+    <thead><tr><th>Channel</th><th class="num">Targets contacted</th><th class="num">Recovery per target (₹)</th><th class="num">Std. error</th><th>Verdict</th></tr></thead>
+    <tbody id="channel-table"></tbody>
+  </table>
+
+  <div class="section-title"><span class="idx">C</span><h2>Agent tenure vs. contact rate &amp; PTP-kept rate</h2></div>
+  <div class="grid grid-2">
+    <div class="chart-box"><div class="chart-head"><h3>Contact rate by tenure</h3></div><canvas id="c-tenure-contact" height="110"></canvas></div>
+    <div class="chart-box"><div class="chart-head"><h3>PTP kept rate by tenure</h3></div><canvas id="c-tenure-ptp" height="110"></canvas></div>
+  </div>
+  <div class="small" style="margin-top:8px;">Minimum-volume threshold applied: only the 114 of 1,000 agents with ≥20 logged sessions are eligible for individual-agent ranking (not shown here to avoid small-sample noise); tenure buckets above are aggregated across all agents with valid <span class="mono">joined_at</span> dates.</div>
+
+  <div class="section-title"><span class="idx">D</span><h2>Attribution-window sensitivity (why "driver" numbers move)</h2></div>
+  <table>
+    <thead><tr><th>Attribution window</th><th class="num">Payments matched to a prior campaign</th></tr></thead>
+    <tbody>
+      <tr><td>7 days</td><td class="num mono">1,338</td></tr>
+      <tr><td>14 days</td><td class="num mono">2,392</td></tr>
+      <tr><td>30 days</td><td class="num mono">4,515</td></tr>
+      <tr><td>60 days</td><td class="num mono">7,515</td></tr>
+      <tr><td>90 days</td><td class="num mono">9,505</td></tr>
+    </tbody>
+  </table>
+  <div class="callout" style="margin-top:14px;">
+    <h4>Why this matters for "why did it happen"</h4>
+    56.7% of targeted accounts (13,235 of 23,344) were touched by more than one campaign. Any campaign- or channel-level performance number is therefore highly sensitive to the attribution window chosen — a 7-day window captures 7x fewer payments than a 90-day window. All channel/driver comparisons on this page use a fixed 30-day window for consistency; treat single-window "winners" with caution.
+  </div>
+</div>
+
+<!-- ============ PANEL 5: DATA QUALITY ============ -->
+<div class="panel" id="panel-dq">
+
+  <div class="section-title"><span class="idx">A</span><h2>Raw → Rejected/Corrected → Golden</h2></div>
+  <div class="grid grid-3">
+    <div class="card kpi"><div class="label">Raw payment rows</div><div class="value">25,500</div></div>
+    <div class="card kpi"><div class="label">Removed as duplicates</div><div class="value" style="color:var(--red);">−500</div><div class="delta flat">486 exact-duplicate rows, 500 duplicated payment_ids</div></div>
+    <div class="card kpi"><div class="label">Golden payment rows</div><div class="value" style="color:var(--teal);">25,000</div></div>
+  </div>
+
+  <div class="section-title"><span class="idx">B</span><h2>Findings and business impact</h2></div>
+  <div class="card" style="padding:4px 18px;">
+    <div class="finding"><div class="ftag"><span class="tag tag-fact">Fact</span></div><div class="ftext"><b>Duplicate successful payments.</b> 346 payment_ids appear twice, both copies marked SUCCESS — ₹2.59 Cr of recovery value would be double-counted if not deduplicated. Treatment: keep first occurrence only; applied throughout this dashboard.</div></div>
+    <div class="finding"><div class="ftag"><span class="tag tag-fact">Fact</span></div><div class="ftext"><b>Payment ↔ borrower mismatches.</b> 2,078 payment records (846 unique borrower_ids) don't match the borrowers master; 2,034 of those conflict with the account-level borrower_id rather than being fixable by a simple join. 1,448 are SUCCESS payments worth ~₹10.85 Cr. Treatment: flagged, not silently overwritten — borrower-level cuts of this dashboard exclude these records.</div></div>
+    <div class="finding"><div class="ftag"><span class="tag tag-fact">Fact</span></div><div class="ftext"><b>Outstanding &gt; principal.</b> 13,029 of 30,000 accounts (43%) show outstanding_amount greater than principal_amount. No business rule was provided to explain this (fees/penalties vs. a data error) — retained and flagged, not corrected.</div></div>
+    <div class="finding"><div class="ftag"><span class="tag tag-fact">Fact</span></div><div class="ftext"><b>Borrower identity conflicts.</b> 27,503 of 30,000 borrower rows belong to a borrower_id with conflicting name/phone/email/city/state across records — borrower_id alone is not a reliable identity key in this dataset.</div></div>
+    <div class="finding"><div class="ftag"><span class="tag tag-evidence">Strong evidence</span></div><div class="ftext"><b>Agent/vendor identity is time-varying.</b> All 1,000 agent_ids show conflicting employee_code, vendor_id, team or status across their 30 historical rows on average; 4,078 agent records (13.6%) have joined_at later than updated_at. Agent-level and vendor-level attribution requires an effective-dated join, not a flat lookup — not implemented in the current account_month table, which is a known limitation of this dashboard's agent cuts.</div></div>
+    <div class="finding"><div class="ftag"><span class="tag tag-evidence">Strong evidence</span></div><div class="ftext"><b>Campaign attribution is ambiguous.</b> 56.7% of targeted accounts touched by 2+ campaigns; "latest campaign" attribution is materially different from a windowed attribution (see Driver tab).</div></div>
+    <div class="finding"><div class="ftag"><span class="tag tag-correlation">Correlation</span></div><div class="ftext"><b>Disposition taxonomy changed mid-period.</b> call_dispositions.disposition_code contains both "PROMISE_TO_PAY" and "PTP" as distinct values alongside a disposition_version field — consistent with a vendor/schema code change rather than two different outcomes. Not yet reconciled into a single taxonomy.</div></div>
+    <div class="finding"><div class="ftag"><span class="tag tag-fact">Fact</span></div><div class="ftext"><b>Timestamp anomalies.</b> 30,191 account_status_history records have recorded_at earlier than event_at (backdated/late-arriving events). 1,827 calls (2%) have no agent_id. 2,400 call_attempts (2%) have no vendor_id. 158 call_ids have conflicting duplicate rows (same ID, different data).</div></div>
+  </div>
+
+  <div class="section-title"><span class="idx">C</span><h2>Record quality summary</h2></div>
+  <table>
+    <thead><tr><th>Table</th><th class="num">Total rows</th><th class="num">Flagged / affected</th><th class="num">% affected</th></tr></thead>
+    <tbody>
+      <tr><td>Payments</td><td class="num mono">25,500</td><td class="num mono">500 duplicate IDs</td><td class="num mono">2.0%</td></tr>
+      <tr><td>Accounts</td><td class="num mono">30,000</td><td class="num mono">13,029 outstanding&gt;principal</td><td class="num mono">43.4%</td></tr>
+      <tr><td>Borrowers</td><td class="num mono">30,000</td><td class="num mono">27,503 identity conflicts</td><td class="num mono">91.7%</td></tr>
+      <tr><td>Agents (master)</td><td class="num mono">30,000 rows / 1,000 ids</td><td class="num mono">1,000 ids w/ conflicting attrs</td><td class="num mono">100%</td></tr>
+      <tr><td>Calls</td><td class="num mono">90,079</td><td class="num mono">1,827 missing agent_id · 158 conflicting</td><td class="num mono">2.2%</td></tr>
+      <tr><td>Call attempts</td><td class="num mono">120,000</td><td class="num mono">2,400 missing vendor_id</td><td class="num mono">2.0%</td></tr>
+      <tr><td>Account status history</td><td class="num mono">60,000</td><td class="num mono">30,191 recorded_at &lt; event_at</td><td class="num mono">50.3%</td></tr>
+    </tbody>
+  </table>
+  <div class="small" style="margin-top:8px;">All figures traced to /home/claude/project/notebooks/01_data_profiling.ipynb (Phase 1–2) and re-verified directly against the golden SQLite tables for this dashboard.</div>
+</div>
+
+<!-- ============ PANEL 6: INVESTMENT ============ -->
+<div class="panel" id="panel-invest">
+
+  <div class="section-title"><span class="idx">A</span><h2>Where should the ₹10 Cr go?</h2></div>
+  <div class="callout warn">
+    <h4>Headline answer: the data cannot reliably choose one option today</h4>
+    Two things are true simultaneously in this dataset. First, <b>no cost, spend, salary, or vendor-pricing field exists anywhere</b> in the 17 source tables — ROI, cost-per-₹-recovered, and break-even are therefore not computable for any of the six options, only assumable. Second, <b>none of the operational levers tested (channel, agent tenure, DPD, targeting priority) shows a statistically meaningful effect on recovery</b> in the current data — the "why" behind the Feb→Mar spike remains unexplained. Committing ₹10 Cr against either an unproven cost model or an unproven driver is a bet, not a data-backed decision.
+  </div>
+
+  <div class="section-title"><span class="idx">B</span><h2>Option-by-option, what the data does and doesn't show</h2></div>
+  <table>
+    <thead><tr><th>Option</th><th>What the data shows</th><th>Cost data available?</th><th>Confidence</th></tr></thead>
+    <tbody>
+      <tr><td>Better telephony infrastructure</td><td>Contact rate is ~19–20% flat across all channels and vendors — no vendor stands out as a bottleneck in the aggregate data.</td><td class="num">No</td><td><span class="tag tag-hypothesis">Hypothesis</span></td></tr>
+      <tr><td>More collection agents</td><td>Recovery/agent-hour is flat at ~₹16.1k–17.0k month to month; no evidence current agents are volume-constrained rather than conversion-constrained.</td><td class="num">No</td><td><span class="tag tag-hypothesis">Hypothesis</span></td></tr>
+      <tr><td>AI voice automation</td><td>No current agentic-voice channel exists in the data to benchmark against; cannot estimate incremental lift.</td><td class="num">No</td><td><span class="tag tag-hypothesis">Hypothesis</span></td></tr>
+      <tr><td>Better borrower targeting</td><td>Attribution-window sensitivity (1,338–9,505 payments depending on window) suggests current targeting/attribution logic itself is under-specified — a lower-cost fix (define one attribution rule) before a ₹10 Cr spend.</td><td class="num">No</td><td><span class="tag tag-correlation">Correlation</span></td></tr>
+      <tr><td>WhatsApp / digital engagement</td><td>WhatsApp shows the highest call volume (23,422) of any channel but average, not above-average, contact/recovery outcomes — reach without a proven conversion edge.</td><td class="num">No</td><td><span class="tag tag-correlation">Correlation</span></td></tr>
+      <tr><td>Field operations</td><td>Field visits recover the least contact volume (751 in the 30-day window) but a comparable per-target recovery (₹75.3k) — plausibly the most expensive channel per contact, which would hurt ROI if cost were known.</td><td class="num">No</td><td><span class="tag tag-hypothesis">Hypothesis</span></td></tr>
+    </tbody>
+  </table>
+
+  <div class="section-title"><span class="idx">C</span><h2>Directional lean (not a recommendation)</h2></div>
+  <div class="grid grid-2">
+    <div class="card">
+      <h4 style="font-family:'IBM Plex Sans';font-size:14px;margin-bottom:8px;">If forced to choose today</h4>
+      <p style="font-size:13px;">Fix <b>targeting/attribution logic</b> first — it is the one lever with a demonstrated, large, and controllable effect on reported numbers (7x swing in matched payments across attribution windows) and is far cheaper than ₹10 Cr. It de-risks every other decision, since campaign and channel performance cannot be trusted until attribution is fixed.</p>
+    </div>
+    <div class="card">
+      <h4 style="font-family:'IBM Plex Sans';font-size:14px;margin-bottom:8px;">Before committing the ₹10 Cr</h4>
+      <p style="font-size:13px;">Run a controlled pilot (e.g. randomized channel or staffing allocation across a matched set of accounts) for 2–3 months with cost tracked from day one. That converts today's "no evidence of a driver" into either a real, measurable ROI case or a documented reason to not invest in that lever.</p>
+    </div>
+  </div>
+
+  <div class="section-title"><span class="idx">D</span><h2>What data/experiment is needed to de-risk this decision</h2></div>
+  <ul class="plain">
+    <li>Cost data: agent fully-loaded cost, telephony per-minute/per-call cost, WhatsApp/SMS per-message cost, field-visit per-visit cost, AI voice vendor pricing.</li>
+    <li>A single, documented attribution rule (fixed window + tie-break) applied consistently, so channel/campaign comparisons stop moving with window choice.</li>
+    <li>An effective-dated agent↔vendor↔team mapping, so agent/vendor performance isn't computed on a flat (and currently 100%-conflicting) lookup.</li>
+    <li>A true randomized or quasi-experimental test (e.g. difference-in-differences around a real strategy change, or an A/B test) — the mid-year "targeting strategy change" referenced in the assignment brief was not detectable in this data (no break in targeting volume, priority, or channel mix was found), so no counterfactual estimate could be produced without fabricating one.</li>
+  </ul>
+
+</div>
+
+</div><!-- /wrap -->
+
+<div class="wrap">
+<div class="footer-note">
+  Golden dataset: /home/claude/project/sql/sql/collections_analysis.db (account_month, payments, calls, promises_to_pay, daily_targeting, agents, agent_sessions).
+  Source notebook: notebooks/01_data_profiling.ipynb. All figures on this page are computed directly from those tables — none are fabricated or assumed.
+  Excludes August 2026 (partial month, 8 of 31 days) from all trend and verdict statistics unless noted.
+</div>
+</div>
+
+<script id="dashboard-data" type="application/json">{"monthly": [{"month": "2026-01", "total_calls": 12698, "answered_calls": 2545, "contact_rate_pct": 20.04, "total_dispositions": 4978, "rpc_count": 3842, "rpc_rate_pct": 77.18, "total_ptp": 2522, "ptp_rate_pct": 65.64, "kept_ptp": 607, "broken_ptp": 644, "ptp_kept_rate_pct": 24.07, "ptp_kept_rate_resolved_pct": 48.52, "successful_recovery": 187229127.59, "successful_payment_count": 2464, "accounts_paid": 2374, "recovery_rate_pct": 1.785, "recovery_per_account": 78866.52, "agent_hours": 11162.6, "recovery_per_agent_hour": 16772.93, "recovery_mom_pct": null}, {"month": "2026-02", "total_calls": 11580, "answered_calls": 2282, "contact_rate_pct": 19.71, "total_dispositions": 4458, "rpc_count": 3402, "rpc_rate_pct": 76.31, "total_ptp": 2220, "ptp_rate_pct": 65.26, "kept_ptp": 567, "broken_ptp": 551, "ptp_kept_rate_pct": 25.54, "ptp_kept_rate_resolved_pct": 50.72, "successful_recovery": 170142453.76, "successful_payment_count": 2268, "accounts_paid": 2173, "recovery_rate_pct": 1.6221, "recovery_per_account": 78298.41, "agent_hours": 10557.0, "recovery_per_agent_hour": 16116.54, "recovery_mom_pct": -9.1261}, {"month": "2026-03", "total_calls": 12857, "answered_calls": 2570, "contact_rate_pct": 19.99, "total_dispositions": 4888, "rpc_count": 3811, "rpc_rate_pct": 77.97, "total_ptp": 2509, "ptp_rate_pct": 65.84, "kept_ptp": 619, "broken_ptp": 629, "ptp_kept_rate_pct": 24.67, "ptp_kept_rate_resolved_pct": 49.6, "successful_recovery": 188912374.02, "successful_payment_count": 2524, "accounts_paid": 2419, "recovery_rate_pct": 1.801, "recovery_per_account": 78095.24, "agent_hours": 11130.8, "recovery_per_agent_hour": 16972.01, "recovery_mom_pct": 11.0319}, {"month": "2026-04", "total_calls": 12258, "answered_calls": 2366, "contact_rate_pct": 19.3, "total_dispositions": 4792, "rpc_count": 3679, "rpc_rate_pct": 76.77, "total_ptp": 2492, "ptp_rate_pct": 67.74, "kept_ptp": 629, "broken_ptp": 627, "ptp_kept_rate_pct": 25.24, "ptp_kept_rate_resolved_pct": 50.08, "successful_recovery": 175138043.41, "successful_payment_count": 2406, "accounts_paid": 2304, "recovery_rate_pct": 1.6697, "recovery_per_account": 76014.78, "agent_hours": 10620.3, "recovery_per_agent_hour": 16490.84, "recovery_mom_pct": -7.2914}, {"month": "2026-05", "total_calls": 12754, "answered_calls": 2594, "contact_rate_pct": 20.34, "total_dispositions": 4980, "rpc_count": 3855, "rpc_rate_pct": 77.41, "total_ptp": 2507, "ptp_rate_pct": 65.03, "kept_ptp": 634, "broken_ptp": 652, "ptp_kept_rate_pct": 25.29, "ptp_kept_rate_resolved_pct": 49.3, "successful_recovery": 184250278.5, "successful_payment_count": 2449, "accounts_paid": 2344, "recovery_rate_pct": 1.7566, "recovery_per_account": 78605.07, "agent_hours": 10833.1, "recovery_per_agent_hour": 17008.04, "recovery_mom_pct": 5.2029}, {"month": "2026-06", "total_calls": 12137, "answered_calls": 2476, "contact_rate_pct": 20.4, "total_dispositions": 4821, "rpc_count": 3726, "rpc_rate_pct": 77.29, "total_ptp": 2439, "ptp_rate_pct": 65.46, "kept_ptp": 602, "broken_ptp": 616, "ptp_kept_rate_pct": 24.68, "ptp_kept_rate_resolved_pct": 49.43, "successful_recovery": 175559726.97, "successful_payment_count": 2366, "accounts_paid": 2286, "recovery_rate_pct": 1.6737, "recovery_per_account": 76797.78, "agent_hours": 10703.0, "recovery_per_agent_hour": 16402.84, "recovery_mom_pct": -4.7167}, {"month": "2026-07", "total_calls": 12583, "answered_calls": 2433, "contact_rate_pct": 19.34, "total_dispositions": 4865, "rpc_count": 3782, "rpc_rate_pct": 77.74, "total_ptp": 2626, "ptp_rate_pct": 69.43, "kept_ptp": 645, "broken_ptp": 668, "ptp_kept_rate_pct": 24.56, "ptp_kept_rate_resolved_pct": 49.12, "successful_recovery": 187242265.08, "successful_payment_count": 2441, "accounts_paid": 2335, "recovery_rate_pct": 1.7851, "recovery_per_account": 80189.41, "agent_hours": 11180.2, "recovery_per_agent_hour": 16747.73, "recovery_mom_pct": 6.6545}], "claim_test": {"reported_pct": 11.0, "jan_recovery": 187229127.59, "jul_recovery": 187242265.08, "overall_change_pct": 0.007, "avg_mom_pct": 0.293, "median_mom_pct": 0.243, "std_mom_pct": 8.381, "feb_mar_mom_pct": 11.032, "trend_r2": 0.0041, "h1_avg": 182094651.79, "h2_avg": 182350756.85, "h1_h2_change_pct": 0.141}, "dpd_bucket": [{"bucket": "0", "recovery": 117461931.08, "outstanding": 948218629.01, "recovery_rate_pct": 12.388}, {"bucket": "1-30", "recovery": 471539790.7, "outstanding": 3834100517.71, "recovery_rate_pct": 12.299}, {"bucket": "31-60", "recovery": 252777083.08, "outstanding": 1914490301.17, "recovery_rate_pct": 13.203}, {"bucket": "61-90", "recovery": 238735656.37, "outstanding": 1895868396.28, "recovery_rate_pct": 12.592}, {"bucket": "90+", "recovery": 235069503.41, "outstanding": 1896357498.83, "recovery_rate_pct": 12.396}], "risk_mix_by_month": [{"month": "2026-01", "HIGH": 25.77, "LOW": 24.27, "MEDIUM": 25.47, "NPA": 24.49}, {"month": "2026-02", "HIGH": 24.47, "LOW": 24.68, "MEDIUM": 25.81, "NPA": 25.04}, {"month": "2026-03", "HIGH": 25.5, "LOW": 24.92, "MEDIUM": 24.16, "NPA": 25.42}, {"month": "2026-04", "HIGH": 23.7, "LOW": 26.86, "MEDIUM": 25.05, "NPA": 24.39}, {"month": "2026-05", "HIGH": 26.78, "LOW": 24.8, "MEDIUM": 24.39, "NPA": 24.04}, {"month": "2026-06", "HIGH": 25.59, "LOW": 24.79, "MEDIUM": 26.15, "NPA": 23.47}, {"month": "2026-07", "HIGH": 23.73, "LOW": 26.68, "MEDIUM": 25.73, "NPA": 23.85}, {"month": "2026-08", "HIGH": 28.3, "LOW": 21.55, "MEDIUM": 22.01, "NPA": 28.14}], "channel_calls": [{"channel": "FIELD", "total_calls": 13431, "answered": 2662, "contact_rate_pct": 19.82}, {"channel": "MIXED", "total_calls": 17100, "answered": 3449, "contact_rate_pct": 20.17}, {"channel": "SMS", "total_calls": 21077, "answered": 4180, "contact_rate_pct": 19.83}, {"channel": "VOICE", "total_calls": 15049, "answered": 2909, "contact_rate_pct": 19.33}, {"channel": "WHATSAPP", "total_calls": 23422, "answered": 4696, "contact_rate_pct": 20.05}], "channel_targeting_recovery": [{"recommended_channel": "FIELD", "n": 751, "total": 56559965.06, "mean": 75312.87, "std": 43775.23, "se": 1597.38}, {"recommended_channel": "SMS", "n": 790, "total": 58414935.3, "mean": 73942.96, "std": 43290.91, "se": 1540.22}, {"recommended_channel": "VOICE", "n": 804, "total": 61270170.75, "mean": 76206.68, "std": 43554.11, "se": 1536.04}, {"recommended_channel": "WHATSAPP", "n": 759, "total": 57627756.46, "mean": 75925.9, "std": 43227.33, "se": 1569.05}], "channel_targeting_status": [{"recommended_channel": "FIELD", "CONTACTED": 2842, "EXPIRED": 2933, "QUEUED": 2787, "SKIPPED": 2803}, {"recommended_channel": "SMS", "CONTACTED": 2822, "EXPIRED": 2744, "QUEUED": 2848, "SKIPPED": 2807}, {"recommended_channel": "VOICE", "CONTACTED": 2780, "EXPIRED": 2911, "QUEUED": 2786, "SKIPPED": 2725}, {"recommended_channel": "WHATSAPP", "CONTACTED": 2810, "EXPIRED": 2783, "QUEUED": 2781, "SKIPPED": 2838}], "agent_tenure_contact": [{"tenure_bucket": "6-12m", "total_calls": 14830, "answered": 2935, "contact_rate_pct": 19.79}, {"tenure_bucket": "12-24m", "total_calls": 46607, "answered": 9198, "contact_rate_pct": 19.74}, {"tenure_bucket": "24m+", "total_calls": 26815, "answered": 5405, "contact_rate_pct": 20.16}], "agent_tenure_ptp_kept": [{"bucket": "6-12m", "ptp_kept_rate_pct": 26.04}, {"bucket": "12-24m", "ptp_kept_rate_pct": 24.53}, {"bucket": "24m+", "ptp_kept_rate_pct": 25.05}], "headline": {"total_accounts": 30000, "total_borrowers_rows": 30000, "total_principal": 12103665653.54, "total_outstanding": 10489035343.0, "total_agents": 1000, "total_7mo_recovery": 1268474269.33, "overall_recovery_rate_pct": 12.093, "total_ptp": 18000, "kept_ptp": 4489, "broken_ptp": 4553, "avg_contact_rate_pct": 19.87, "avg_rpc_rate_pct": 77.24, "avg_ptp_rate_pct": 66.34, "avg_ptp_kept_rate_pct": 24.86, "avg_recovery_per_account": 78123.89, "avg_recovery_per_agent_hour": 16644.42}, "data_quality": {"raw_payment_rows": 25500, "golden_payment_rows": 25000, "duplicate_payment_ids": 500, "exact_duplicate_payment_rows": 486, "duplicate_success_payment_ids": 346, "duplicate_success_amount_cr": 2.59, "outstanding_gt_principal_accounts": 13029, "total_accounts": 30000, "borrower_identity_conflict_rows": 27503, "total_borrower_rows": 30000, "payment_borrower_mismatch_rows": 2078, "payment_borrower_mismatch_success_amount_cr": 11.07, "agent_master_rows": 30000, "agent_unique_ids": 1000, "agent_identity_conflict_agents": 1000, "agent_invalid_dates": 4078, "call_id_conflict_rows": 158, "call_agent_id_missing": 1827, "call_attempts_vendor_missing": 2400, "account_status_history_recorded_before_event": 30191, "targeted_accounts_multi_campaign_pct": 56.7, "disposition_code_duplication_note": "disposition_code contains both PROMISE_TO_PAY and PTP as separate values, indicating a disposition taxonomy/version change (see disposition_version field) rather than two distinct outcomes."}}</script>
+<script>
+const DATA = JSON.parse(document.getElementById('dashboard-data').textContent);
+const MONTHS_FULL = DATA.monthly.map(m=>m.month);
+const fmtCr = v => '₹' + (v/1e7).toFixed(2) + ' Cr';
+const fmtNum = v => v==null? '–' : new Intl.NumberFormat('en-IN').format(Math.round(v));
+const fmtPct = (v,d=2) => v==null? '–' : v.toFixed(d)+'%';
+
+const TEAL = '#0E6E63', AMBER='#B9812E', RED='#A8402F', NAVY='#1E2A3A', INKSOFT='#5B6470';
+
+// ---------------- Tabs ----------------
+document.querySelectorAll('.tab-btn').forEach(btn=>{
+  btn.addEventListener('click', ()=>{
+    document.querySelectorAll('.tab-btn').forEach(b=>b.classList.remove('active'));
+    document.querySelectorAll('.panel').forEach(p=>p.classList.remove('active'));
+    btn.classList.add('active');
+    document.getElementById('panel-'+btn.dataset.tab).classList.add('active');
+    window.scrollTo({top:0, behavior:'instant'});
+  });
+});
+
+// ---------------- Chart defaults ----------------
+Chart.defaults.font.family = "'IBM Plex Mono', monospace";
+Chart.defaults.font.size = 11;
+Chart.defaults.color = INKSOFT;
+
+function baseLineOpts(yTicks){
+  return {
+    responsive:true,
+    plugins:{legend:{display:false}, tooltip:{backgroundColor:NAVY, titleFont:{family:"'IBM Plex Mono'"}, bodyFont:{family:"'IBM Plex Mono'"}}},
+    scales:{
+      x:{grid:{display:false}},
+      y:{grid:{color:'#E5E2D8'}, ticks: yTicks || {}}
+    }
+  };
+}
+
+// ---------------- Exec KPIs ----------------
+const h = DATA.headline;
+document.getElementById('exec-kpis').innerHTML = [
+  ['Total portfolio (outstanding)', fmtCr(h.total_outstanding), h.total_accounts.toLocaleString()+' accounts'],
+  ['Total recovered, 7 months', fmtCr(h.total_7mo_recovery), 'Jan–Jul 2026, SUCCESS payments only'],
+  ['Overall recovery rate', h.overall_recovery_rate_pct.toFixed(2)+'%', 'recovered / outstanding, 7mo'],
+  ['Avg. contact rate', h.avg_contact_rate_pct.toFixed(1)+'%', 'answered / total calls'],
+  ['Avg. RPC rate', h.avg_rpc_rate_pct.toFixed(1)+'%', 'of dispositions, excl. no-contact/wrong-number'],
+  ['Avg. PTP rate', h.avg_ptp_rate_pct.toFixed(1)+'%', 'PTPs / right-party contacts'],
+  ['Avg. PTP kept rate', h.avg_ptp_kept_rate_pct.toFixed(1)+'%', 'of all PTPs made'],
+  ['Avg. recovery / agent-hour', '₹'+fmtNum(h.avg_recovery_per_agent_hour), 'logged session hours'],
+].map(([label,value,delta])=>`<div class="card kpi"><div class="label">${label}</div><div class="value">${value}</div><div class="delta flat">${delta}</div></div>`).join('');
+
+// ---------------- Perf KPIs (reuse) ----------------
+document.getElementById('perf-kpis').innerHTML = [
+  ['Recovery amount / month, avg', fmtCr(h.total_7mo_recovery/7)],
+  ['Recovery rate, avg', h.overall_recovery_rate_pct.toFixed(2)+'% (7mo cum.)'],
+  ['Recovery / account, avg', '₹'+fmtNum(h.avg_recovery_per_account)],
+  ['Recovery / agent-hour, avg', '₹'+fmtNum(h.avg_recovery_per_agent_hour)],
+].map(([label,value])=>`<div class="card kpi"><div class="label">${label}</div><div class="value">${value}</div></div>`).join('');
+
+// ---------------- Exec trend chart (toggle) ----------------
+const execLabels = MONTHS_FULL;
+const execCtx = document.getElementById('chart-exec-trend').getContext('2d');
+let execChart;
+function drawExecTrend(metric){
+  const vals = DATA.monthly.map(m=>m[metric]);
+  if(execChart) execChart.destroy();
+  execChart = new Chart(execCtx, {
+    type:'bar',
+    data:{labels:execLabels, datasets:[{
+      data: vals,
+      backgroundColor: execLabels.map((m,i)=> i===2 ? AMBER : TEAL),
+      borderRadius:2, maxBarThickness:46
+    }]},
+    options: baseLineOpts()
+  });
+}
+drawExecTrend('successful_recovery');
+document.querySelectorAll('#exec-metric-toggle button').forEach(btn=>{
+  btn.addEventListener('click',()=>{
+    document.querySelectorAll('#exec-metric-toggle button').forEach(b=>b.classList.remove('active'));
+    btn.classList.add('active');
+    drawExecTrend(btn.dataset.m);
+  });
+});
+
+// ---------------- Claim tab: MoM chart ----------------
+new Chart(document.getElementById('chart-mom').getContext('2d'), {
+  type:'bar',
+  data:{labels: MONTHS_FULL.slice(1), datasets:[{
+    data: DATA.monthly.slice(1).map(m=>m.recovery_mom_pct),
+    backgroundColor: DATA.monthly.slice(1).map(m=> m.recovery_mom_pct>=0 ? (Math.abs(m.recovery_mom_pct-11)<0.5? AMBER: TEAL) : RED),
+    borderRadius:2, maxBarThickness:50
+  }]},
+  options: {...baseLineOpts(), plugins:{legend:{display:false}, tooltip:{callbacks:{label:(c)=>c.parsed.y.toFixed(2)+'%'}}}}
+});
+
+// ---------------- Recovery performance charts ----------------
+function lineChart(id, key, color, fmt){
+  new Chart(document.getElementById(id).getContext('2d'), {
+    type:'line',
+    data:{labels: MONTHS_FULL, datasets:[{
+      data: DATA.monthly.map(m=>m[key]),
+      borderColor:color, backgroundColor:color+'22', fill:true, tension:.3, pointRadius:4, pointBackgroundColor:color
+    }]},
+    options: baseLineOpts()
+  });
+}
+lineChart('c-rec-amt','successful_recovery',TEAL);
+lineChart('c-rec-rate','recovery_rate_pct',NAVY);
+lineChart('c-rec-acct','recovery_per_account',AMBER);
+lineChart('c-rec-hr','recovery_per_agent_hour','#2B5F94');
+
+// ---------------- Funnel ----------------
+const totals = DATA.monthly.reduce((acc,m)=>{
+  acc.calls+=m.total_calls; acc.rpc+=m.rpc_count; acc.ptp+=m.total_ptp; acc.paid+=m.successful_payment_count; return acc;
+},{calls:0,rpc:0,ptp:0,paid:0});
+new Chart(document.getElementById('c-funnel').getContext('2d'), {
+  type:'bar',
+  data:{labels:['Calls','Right-Party Contact','Promise to Pay','Successful Payment'],
+    datasets:[{data:[totals.calls, totals.rpc, totals.ptp, totals.paid], backgroundColor:[NAVY,TEAL,AMBER,'#2B5F94'], borderRadius:2}]},
+  options:{indexAxis:'y', responsive:true, plugins:{legend:{display:false}}, scales:{x:{grid:{color:'#E5E2D8'}}, y:{grid:{display:false}}}}
+});
+
+// ---------------- DPD table ----------------
+document.getElementById('dpd-table').innerHTML = DATA.dpd_bucket.map(d=>
+  `<tr><td>${d.bucket}</td><td class="num mono">${fmtCr(d.outstanding)}</td><td class="num mono">${fmtCr(d.recovery)}</td><td class="num mono">${d.recovery_rate_pct.toFixed(2)}%</td></tr>`
+).join('');
+
+// ---------------- Channel chart + table ----------------
+new Chart(document.getElementById('c-channel').getContext('2d'), {
+  type:'bar',
+  data:{labels: DATA.channel_targeting_recovery.map(c=>c.recommended_channel),
+    datasets:[{
+      data: DATA.channel_targeting_recovery.map(c=>c.mean),
+      backgroundColor: TEAL, borderRadius:3, maxBarThickness:70,
+      errorBars: true
+    }]},
+  options: {...baseLineOpts(), plugins:{legend:{display:false}, tooltip:{callbacks:{label:c=>'₹'+fmtNum(c.parsed.y)+' per target'}}}}
+});
+document.getElementById('channel-table').innerHTML = DATA.channel_targeting_recovery.map(c=>{
+  const span = Math.max(...DATA.channel_targeting_recovery.map(x=>x.mean)) - Math.min(...DATA.channel_targeting_recovery.map(x=>x.mean));
+  return `<tr><td>${c.recommended_channel}</td><td class="num mono">${fmtNum(c.n)}</td><td class="num mono">₹${fmtNum(c.mean)}</td><td class="num mono">±${fmtNum(c.se)}</td><td><span class="tag tag-hypothesis">No significant edge</span></td></tr>`;
+}).join('');
+
+// ---------------- Tenure charts ----------------
+new Chart(document.getElementById('c-tenure-contact').getContext('2d'), {
+  type:'bar',
+  data:{labels: DATA.agent_tenure_contact.map(t=>t.tenure_bucket),
+    datasets:[{data: DATA.agent_tenure_contact.map(t=>t.contact_rate_pct), backgroundColor: NAVY, borderRadius:3, maxBarThickness:70}]},
+  options: baseLineOpts()
+});
+new Chart(document.getElementById('c-tenure-ptp').getContext('2d'), {
+  type:'bar',
+  data:{labels: DATA.agent_tenure_ptp_kept.map(t=>t.bucket),
+    datasets:[{data: DATA.agent_tenure_ptp_kept.map(t=>t.ptp_kept_rate_pct), backgroundColor: AMBER, borderRadius:3, maxBarThickness:70}]},
+  options: baseLineOpts()
+});
+</script>
+</body>
+</html>
